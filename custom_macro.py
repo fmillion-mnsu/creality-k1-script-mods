@@ -85,7 +85,6 @@ class CUSTOM_MACRO:
                 'G1 F2400 E-0.5',
                 'SET_VELOCITY_LIMIT SQUARE_CORNER_VELOCITY=5',
                 'M204 S12000',
-                'G21',
                 'SET_VELOCITY_LIMIT ACCEL_TO_DECEL=6000',
                 # 'SET_PRESSURE_ADVANCE ADVANCE=0.04',
                 # 'SET_PRESSURE_ADVANCE SMOOTH_TIME=0.04',
@@ -100,6 +99,7 @@ class CUSTOM_MACRO:
                 'G1 Z2.0 F600.0',
                 'G1 Z0.3 F600.0',
                 'G1 Z2.0 F600.0',
+                'G1 F2400 E-0.5', # retract a bit of filament to reduce oozing
                 # 'G1 X0.4 Y10.0 Z0.3 F6000.0',
                 'M82',
                 'G92 E0',
