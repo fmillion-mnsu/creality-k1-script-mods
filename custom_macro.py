@@ -1,11 +1,13 @@
-# Support for 1-wire based temperature sensors
-#
-# Copyright (C) 2020 Alan Lord <alanslists@gmail.com>
-#
-# This file may be distributed under the terms of the GNU GPLv3 license.
+# Modifications to Creality K1 Custom Macros
+# by Flint Million (flint.million@mnsu.edu)
+
+# This file is modified from GPL code and hence is distributed
+# under the terms of the GPL v3 or later.
+
 import time
 
 class CUSTOM_MACRO:
+
     def __init__(self, config):
         self.printer = config.get_printer()
         self.gcode = self.printer.lookup_object('gcode')
@@ -14,19 +16,29 @@ class CUSTOM_MACRO:
         self.extruder_temp=None
         self.bed_temp=None
         self.prtouch = None
-        self.gcode.register_command("CX_PRINT_LEVELING_CALIBRATION", self.cmd_CX_PRINT_LEVELING_CALIBRATION, desc=self.cmd_CX_PRINT_LEVELING_CALIBRATION_help)
-        self.gcode.register_command("CX_CLEAN_CALIBRATION_FLAGS", self.cmd_CX_CLEAN_CALIBRATION_FLAGS, desc=self.cmd_CX_CLEAN_CALIBRATION_FLAGS_help)
-        self.gcode.register_command("CX_PRINT_DRAW_ONE_LINE", self.cmd_CX_PRINT_DRAW_ONE_LINE, desc=self.cmd_CX_PRINT_DRAW_ONE_LINE_help)
-        self.gcode.register_command("CX_ROUGH_G28", self.cmd_CX_ROUGH_G28, desc=self.cmd_CX_ROUGH_G28_help)
-        self.gcode.register_command("CX_NOZZLE_CLEAR", self.cmd_CX_NOZZLE_CLEAR, desc=self.cmd_CX_NOZZLE_CLEAR_help)
+
+        # Registers the Creality custom macros as GCODE commands
+        # Updated by fmillion-mnsu - You can now add new commands by simply
+        # adding a function to the class called cmd_WHATEVER, setting a docstring
+        # on that fucntion, and adding WHATEVER to this list.
+        # TODO: add self-discovery by looking for commands as functions starting with cmd_
+        custom_macro_list = [
+            "CX_PRINT_LEVELING_CALIBRATION",
+            "CX_CLEAN_CALIBRATION_FLAGS",
+            "CX_PRINT_DRAW_ONE_LINE",
+            "CX_ROUGH_G28",
+            "CX_NOZZLE_CLEAR"
+        ]
+        for cm in custom_macro_list:
+            self.gcode.register_command(cm, getattr(self, f"cmd_{cm}"), desc=getattr(self, f"cmd_{cm}").__doc__)
+        
+        # Set values on self
         self.default_extruder_temp = config.getfloat("default_extruder_temp", default=220.0)
         self.default_bed_temp = config.getfloat("default_bed_temp", default=50.0)
         self.g28_ext_temp = config.getfloat("g28_ext_temp", default=200.0)
         self.nozzle_clear = config.getboolean('nozzle_clear', True)
         self.calibration = config.getint('calibration', default=0)
         self.leveling_calibration = 0
-        pass
-
 
     def get_status(self, eventtime):
         return {
@@ -36,18 +48,18 @@ class CUSTOM_MACRO:
             'g28_ext_temp': self.g28_ext_temp
         }
 
-    cmd_CX_PRINT_LEVELING_CALIBRATION_help = "Start Print function,three parameter:EXTRUDER_TEMP(180-300),BED_TEMP(0-100),CALIBRATION(0 or 1)"
     def cmd_CX_PRINT_LEVELING_CALIBRATION(self, gcmd):
+        """Start Print function,three parameter:EXTRUDER_TEMP(180-300),BED_TEMP(0-100),CALIBRATION(0 or 1)"""
         self.gcode.run_script_from_command('CHECK_BED_MESH AUTO_G29=1')
         pass
 
-    cmd_CX_CLEAN_CALIBRATION_FLAGS_help = "Clean calibration flags"
     def cmd_CX_CLEAN_CALIBRATION_FLAGS(self, gcmd):
+        """Clean calibration flags"""
         self.leveling_calibration = 0
         pass
 
-    cmd_CX_PRINT_DRAW_ONE_LINE_help = "Draw one line before printing"
     def cmd_CX_PRINT_DRAW_ONE_LINE(self, gcmd):
+        """Draw primer line before printing"""
         self.gcode.respond_info("Running macro: CX_PRINT_DRAW_ONE_LINE")
 
         self.gcode.run_script_from_command('M83')
@@ -98,10 +110,10 @@ class CUSTOM_MACRO:
             for gc in gcodes:
                 self.gcode.run_script_from_command(gc)
 
-        pass
+        self.gcode.respond_info("Macro FINISHED: CX_PRINT_DRAW_ONE_LINE")
 
-    cmd_CX_ROUGH_G28_help = "rough G28"
     def cmd_CX_ROUGH_G28(self, gcmd):
+        "rough G28"
         self.gcode.respond_info("Running macro: CX_ROUGH_G28")
         self.extruder_temp = gcmd.get_float('EXTRUDER_TEMP', default=self.default_extruder_temp, minval=180.0, maxval=320.0)
         #self.g28_ext_temp = self.extruder_temp - 70
@@ -122,10 +134,11 @@ class CUSTOM_MACRO:
         self.gcode.run_script_from_command('M204 S500')
         self.gcode.run_script_from_command('G28')
         # self.gcode.run_script_from_command('NOZZLE_CLEAR HOT_MIN_TEMP=%d HOT_MAX_TEMP=%d BED_MAX_TEMP=%d' % (self.g28_ext_temp, self.extruder_temp - 20, self.bed_temp))
-        pass
 
-    cmd_CX_NOZZLE_CLEAR_help = "nozzle clear with temperature"
+        self.gcode.respond_info("Macro FINISHED: CX_ROUGH_G28")
+
     def cmd_CX_NOZZLE_CLEAR(self, gcmd):
+        "nozzle clear with temperature"
         self.gcode.run_script_from_command('NOZZLE_CLEAR HOT_MIN_TEMP=%d HOT_MAX_TEMP=%d BED_MAX_TEMP=%d' % (self.g28_ext_temp, self.extruder_temp - 20, self.bed_temp))
         pass
 
