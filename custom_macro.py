@@ -85,7 +85,7 @@ class CUSTOM_MACRO:
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
         self.gcode.run_script_from_command('M104 S%d' % (self.extruder_temp))
         self.gcode.run_script_from_command('M140 S%d' % (self.bed_temp))
-        self.gcode.respond_info("CX_PRINT_DRAW_ONE_LINE: Waiting for printing temperature...")
+        self.gcode.respond_info(f"CX_PRINT_DRAW_ONE_LINE: Waiting for printing temperature... (extruder={self.extruder_temp}, bed={self.bed_temp})")
         self.pheaters.set_temperature(self.heater_hot, self.extruder_temp, True)
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
         while self.pheaters.can_break_flag == 1:
@@ -93,8 +93,8 @@ class CUSTOM_MACRO:
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
         if self.pheaters.can_break_flag == 3:
             self.pheaters.can_break_flag = 0
+            self.gcode.respond_info("CX_PRINT_DRAW_ONE_LINE: Printing temperature achieved.")
             #self.gcode.respond_info("can_break_flag is 3")
-            self.gcode.respond_info(f"CX_PRINT_DRAW_ONE_LINE: Print temperature achieved. (extruder={self.extruder_temp}, bed={self.bed_temp})")
             gcodes = [
                 'G21',
                 'G1 F2400 E-0.5',
