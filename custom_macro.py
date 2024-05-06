@@ -27,7 +27,8 @@ class CUSTOM_MACRO:
             "CX_CLEAN_CALIBRATION_FLAGS",
             "CX_PRINT_DRAW_ONE_LINE",
             "CX_ROUGH_G28",
-            "CX_NOZZLE_CLEAR"
+            "CX_NOZZLE_CLEAR",
+            "SET_QMODE_FLAG"
         ]
         for cm in custom_macro_list:
             self.gcode.register_command(cm, getattr(self, f"cmd_{cm}"), desc=getattr(self, f"cmd_{cm}").__doc__)
@@ -39,13 +40,15 @@ class CUSTOM_MACRO:
         self.nozzle_clear = config.getboolean('nozzle_clear', True)
         self.calibration = config.getint('calibration', default=0)
         self.leveling_calibration = 0
-
+        self.qmode_flag = 0
+        
     def get_status(self, eventtime):
         return {
             'leveling_calibration': self.leveling_calibration,
             'default_extruder_temp': self.default_extruder_temp,
             'default_bed_temp': self.default_bed_temp,
-            'g28_ext_temp': self.g28_ext_temp
+            'g28_ext_temp': self.g28_ext_temp,
+            'qmode_flag': self.qmode_flag
         }
 
     def cmd_CX_PRINT_LEVELING_CALIBRATION(self, gcmd):
@@ -62,7 +65,16 @@ class CUSTOM_MACRO:
         """Draw primer line before printing"""
         self.gcode.respond_info("Running macro: CX_PRINT_DRAW_ONE_LINE")
 
+        # If we have NoneType on extruder/bed temps, get them as we do in CX_ROUGH_G28.
+        # Workaround to allow you to manually prepare the printer using PRINT_PREPARED.
+
+        if self.extruder_temp is None:
+            self.extruder_temp = gcmd.get_float('EXTRUDER_TEMP', default=self.default_extruder_temp, minval=180.0, maxval=320.0)
+        if self.bed_temp is None:
+            self.bed_temp = gcmd.get_float('BED_TEMP', default=self.default_bed_temp, minval=0.0, maxval=130.0)
+
         # Move the extruder to the starting position
+        self.gcode.run_script_from_command('G28 X Y')
         self.gcode.run_script_from_command('M83')
         self.gcode.run_script_from_command('G1 X10 Y10 Z2 F6000')
         self.gcode.run_script_from_command('G1 Z0.1 F600')
@@ -143,6 +155,26 @@ class CUSTOM_MACRO:
         "nozzle clear with temperature"
         self.gcode.respond_info("Running macro: CX_NOZZLE_CLEAR")
         self.gcode.run_script_from_command('NOZZLE_CLEAR HOT_MIN_TEMP=%d HOT_MAX_TEMP=%d BED_MAX_TEMP=%d' % (self.g28_ext_temp, self.extruder_temp - 20, self.bed_temp))
+        pass
+
+    def cmd_SET_QMODE_FLAG(self, gcmd):
+        "set qmode flag"
+        self.qmode_flag =  gcmd.get_int('FLAG', default=1, minval=0, maxval=1)
+        gcmd.respond_info("SET_QMODE_FLAG: self.qmode_flag={}".format(self.qmode_flag))
+        import json, logging
+        try:
+            print_stats = self.printer.lookup_object('print_stats')
+            v_sd = self.printer.lookup_object('virtual_sdcard')
+            speed_mode_path = v_sd.speed_mode_path
+            if print_stats.state == "printing" and self.qmode_flag == 1:
+                result = {}
+                result["speed_mode"] = 2
+                with open(speed_mode_path, "w") as f:
+                    f.write(json.dumps(result))
+                    f.flush()
+        except Exception as err:
+            err_msg = "cmd_SET_QMODE_FLAG err %s" % str(err)
+            logging.error(err_msg)
         pass
 
 def load_config(config):
