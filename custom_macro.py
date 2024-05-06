@@ -62,17 +62,20 @@ class CUSTOM_MACRO:
         """Draw primer line before printing"""
         self.gcode.respond_info("Running macro: CX_PRINT_DRAW_ONE_LINE")
 
+        # Move the extruder to the starting position
         self.gcode.run_script_from_command('M83')
         self.gcode.run_script_from_command('G1 X10 Y10 Z2 F6000')
         self.gcode.run_script_from_command('G1 Z0.1 F600')
+        
+        # Wait for printer to reach print temperature
         self.pheaters = self.printer.lookup_object('heaters')
         self.heater_hot = self.printer.lookup_object('extruder').heater
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
         self.gcode.run_script_from_command('M104 S%d' % (self.extruder_temp))
         self.gcode.run_script_from_command('M140 S%d' % (self.bed_temp))
+        self.gcode.respond_info("CX_PRINT_DRAW_ONE_LINE: Waiting for printing temperature...")
         self.pheaters.set_temperature(self.heater_hot, self.extruder_temp, True)
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
-        self.gcode.respond_info("CX_PRINT_DRAW_ONE_LINE: Waiting for printing temperature...")
         while self.pheaters.can_break_flag == 1:
             time.sleep(1)
         #self.gcode.respond_info("can_break_flag = %d" % (self.pheaters.can_break_flag))
@@ -103,7 +106,6 @@ class CUSTOM_MACRO:
                 # 'G1 X0.4 Y10.0 Z0.3 F6000.0',
                 'M82',
                 'G92 E0',
-                # 'G1 Z2.0 F600',
                 'G1 F12000',
                 'G21',
             ]
@@ -139,6 +141,7 @@ class CUSTOM_MACRO:
 
     def cmd_CX_NOZZLE_CLEAR(self, gcmd):
         "nozzle clear with temperature"
+        self.gcode.respond_info("Running macro: CX_NOZZLE_CLEAR")
         self.gcode.run_script_from_command('NOZZLE_CLEAR HOT_MIN_TEMP=%d HOT_MAX_TEMP=%d BED_MAX_TEMP=%d' % (self.g28_ext_temp, self.extruder_temp - 20, self.bed_temp))
         pass
 
